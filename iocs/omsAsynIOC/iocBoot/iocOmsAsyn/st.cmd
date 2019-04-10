@@ -2,7 +2,7 @@
 
 ## The following is needed if your board support package doesn't at boot time
 ## automatically cd to the directory containing its startup script
-#cd "/home/oxygen40/KPETERSN/epics/motor-split/OmsAsyn/motorOmsAsynBlank/iocs/omsAsynIOC/iocBoot/iocOmsAsyn"
+#cd "/home/username/epics/iocs/omsAsynIOC/iocBoot/iocOmsAsyn"
 
 < cdCommands
 #< ../nfsCommands
@@ -17,13 +17,18 @@ ld 0,0, "omsAsyn.munch"
 cd top
 dbLoadDatabase "dbd/omsAsyn.dbd"
 omsAsyn_registerRecordDeviceDriver pdbbase
-
-## Load record instances
-#dbLoadTemplate "db/omsAsyn.substitutions"
-#dbLoadRecords "db/omsAsyn.db", "user=kpetersn"
-
 cd startup
+
+## motorUtil (allstop & alldone)
+dbLoadRecords("$(MOTOR)/db/motorUtil.db", "P=omsAsyn:")
+
+## 
+< MAXnet.cmd
+< MAXv.cmd
+
 iocInit
 
-## Start any sequence programs
-#seq &sncxxx, "user=kpetersn"
+## motorUtil (allstop & alldone)
+motorUtilInit("omsAsyn:")
+
+# Boot complete
