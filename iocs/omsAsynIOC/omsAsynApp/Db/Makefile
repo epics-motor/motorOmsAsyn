@@ -12,6 +12,12 @@ include $(TOP)/configure/CONFIG
 # databases, templates, substitutions like this
 #DB += xxx.db
 
+ifdef MOTOR_OMSASYN
+DB_INSTALLS += $(MOTOR_OMSASYN)/db/omsAsynString.template
+else
+DB_INSTALLS += $(MOTOR)/db/omsAsynString.template
+endif
+
 #----------------------------------------------------
 # If <anyname>.db template is not named <anyname>*.template add
 # <anyname>_template = <templatename>
