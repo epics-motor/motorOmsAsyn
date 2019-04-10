@@ -21,9 +21,11 @@ omsAsyn_DBD += base.dbd
 # Include dbd files from all support applications:
 #ifdef ASYN
 omsAsyn_DBD += asyn.dbd
+omsAsyn_DBD += drvAsynSerialPort.dbd
+omsAsyn_DBD += drvAsynIPPort.dbd
 #endif
 omsAsyn_DBD += motorSupport.dbd
-omsAsyn_DBD += devOmsAsyn.dbd
+omsAsyn_DBD += omsAsynSupport.dbd
 
 # Add all the support libraries needed by this IOC
 omsAsyn_LIBS += omsAsyn
