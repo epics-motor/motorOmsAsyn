@@ -21,6 +21,10 @@ CHECK_RELEASE = YES
 #   that Base is built for.
 #CROSS_COMPILER_TARGET_ARCHS = vxWorks-ppc32
 
+# Filter out architectures that don't have VMEbus support.
+CROSS_COMPILER_TARGET_ARCHS := $(filter-out \
+    RTEMS-uC5282 RTEMS-pc386, $(CROSS_COMPILER_TARGET_ARCHS))
+
 # To install files into a location other than $(TOP) define
 #   INSTALL_LOCATION here.
 #INSTALL_LOCATION=</absolute/path/to/install/top>
