@@ -166,7 +166,7 @@ void omsMAXv::initialize(const char* portName, int numAxes, int cardNo, const ch
     if (vmeAddr == 1)
         probeAddr = baseAddress + (cardNo * boardAddrSize);
     else
-        probeAddr = (void*) vmeAddr;
+        probeAddr = (void*)(size_t)vmeAddr;
 
     startAddr = (epicsUInt8 *) probeAddr;
     endAddr = startAddr + boardAddrSize;
@@ -192,7 +192,7 @@ void omsMAXv::initialize(const char* portName, int numAxes, int cardNo, const ch
 
     if (status) {
         errlogPrintf("%s:%s:%s: Can't register address 0x%lx \n",
-                        driverName, functionName, portName, (long unsigned int) probeAddr);
+                     driverName, functionName, portName, (long unsigned int)(size_t)probeAddr);
         return;
     }
 
@@ -502,7 +502,7 @@ extern "C" int omsMAXvSetup(
         return 1;
     }
     omsMAXv::numCards = num_cards;
-    omsMAXv::baseAddress = (char *) addrs;
+    omsMAXv::baseAddress = (char *) (size_t)addrs;
 
     switch (addr_type)
     {
