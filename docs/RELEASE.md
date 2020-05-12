@@ -1,5 +1,19 @@
 # motorOmsAsyn Releases
 
+## __R1-0-1 (2020-05-12)__
+R1-0-1 is a release based on the master branch.  
+
+### Changes since R1-0
+
+#### New features
+* None
+
+#### Modifications to existing features
+* Pull request [#3](https://github.com/epics-motor/motorOmsAsyn/pull/3): Compile ``omsMAXv.cpp`` only under Linux/vxWorks
+
+#### Bug fixes
+* Commit [4fdd003](https://github.com/epics-motor/motorOmsAsyn/commit/4fdd003bcede7728327026525ad633beab6cfcaf): Include ``$(MOTOR)/modules/RELEASE.$(EPICS_HOST_ARCH).local`` instead of ``$(MOTOR)/configure/RELEASE``
+
 ## __R1-0 (2019-04-18)__
 R1-0 is a release based on the master branch.  
 
