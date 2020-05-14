@@ -1,5 +1,19 @@
 # motorOmsAsyn Releases
 
+## __R1-0-2 (2020-05-14)__
+R1-0-2 is a release based on the master branch.  
+
+### Changes since R1-0-1
+
+#### New features
+* None
+
+#### Modifications to existing features
+* None
+
+#### Bug fixes
+* Pull request [#5](https://github.com/epics-motor/motorOmsAsyn/pull/5): Exclude MAXv support when building example IOC on Windows
+
 ## __R1-0-1 (2020-05-12)__
 R1-0-1 is a release based on the master branch.  
 
