@@ -8,6 +8,7 @@ include $(TOP)/configure/CONFIG
 #USR_CXXFLAGS += -DDEBUG
 
 DBD += omsAsynSupport.dbd
+DBD += omsAsynMAXnetSupport.dbd
 
 LIBRARY_IOC_DEFAULT += omsAsyn
 

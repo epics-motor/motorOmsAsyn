@@ -25,7 +25,10 @@ omsAsyn_DBD += drvAsynSerialPort.dbd
 omsAsyn_DBD += drvAsynIPPort.dbd
 #endif
 omsAsyn_DBD += motorSupport.dbd
-omsAsyn_DBD += omsAsynSupport.dbd
+omsAsyn_DBD_Linux += omsAsynSupport.dbd
+omsAsyn_DBD_vxWorks += omsAsynSupport.dbd
+omsAsyn_DBD_Win32 += omsAsynMAXnetSupport.dbd
+omsAsyn_DBD_Win64 += omsAsynMAXnetSupport.dbd
 
 # Add all the support libraries needed by this IOC
 omsAsyn_LIBS += omsAsyn
