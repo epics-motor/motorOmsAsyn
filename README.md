@@ -1,6 +1,8 @@
 # motorOmsAsyn
 EPICS asyn motor drivers for the following [OMS](https://www.omsinmotion.com/) controllers: MAXv and MAXnet
 
+[![Build Status](https://travis-ci.org/epics-motor/motorOmsAsyn.png)](https://travis-ci.org/epics-motor/motorOmsAsyn)
+
 motorOmsAsyn is a submodule of [motor](https://github.com/epics-modules/motor).  When motorOmsAsyn is built in the ``motor/modules`` directory, no manual configuration is needed.
 
 motorOmsAsyn can also be built outside of motor by copying it's ``EXAMPLE_RELEASE.local`` file to ``RELEASE.local`` and defining the paths to ``MOTOR`` and itself.
