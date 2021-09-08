@@ -312,8 +312,8 @@ asynStatus omsMAXv::sendOnly(const char *outputBuff)
         epicsThreadSleep(timeout);
         flushTime++;
         if (flushTime == 100 ) {
-        	Debug(1, "%s:%s:%s: unable to flush more than 100 strings\n", driverName, functionName, portName);
-        	return asynError;
+            Debug(1, "%s:%s:%s: unable to flush more than 100 strings\n", driverName, functionName, portName);
+            return asynError;
         }
     }
 
@@ -398,7 +398,7 @@ asynStatus omsMAXv::sendReceive(const char *outputBuff, char *inputBuff, unsigne
     if (pmotor->status1_flag.Bits.text_response == 0)
     {
         Debug(1, "%s:%s:%s: Timeout occurred , %s\n",
-        		driverName, functionName, portName, outputBuff);
+                driverName, functionName, portName, outputBuff);
         return asynTimeout;
     }
 
@@ -409,7 +409,7 @@ asynStatus omsMAXv::sendReceive(const char *outputBuff, char *inputBuff, unsigne
     end    = (char *) &pmotor->inBuffer[putIndex];
 
     if (start < end) {   /* Test for message wraparound in buffer. */
-    	usedSpace = MIN(bufsize, inputSize);
+        usedSpace = MIN(bufsize, inputSize);
         memcpy(inputBuff, start, usedSpace);
     }
     else

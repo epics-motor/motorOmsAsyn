@@ -246,7 +246,7 @@ asynStatus omsBaseController::readInt32(asynUser *pasynUser, epicsInt32 *value)
          }
      } else {
           // Call base class
-   	      status = asynMotorController::readInt32(pasynUser, value);
+          status = asynMotorController::readInt32(pasynUser, value);
      }
 
 
@@ -295,9 +295,9 @@ asynStatus omsBaseController::writeInt32(asynUser *pasynUser, epicsInt32 value)
     }
     else if (function == pollIndex)
     {
-    	 if (value) {
-    		 wakeupPoller();
-    	 }
+        if (value) {
+            wakeupPoller();
+        }
     }
     else {
         return asynMotorController::writeInt32(pasynUser, value);
@@ -563,8 +563,8 @@ asynStatus omsBaseController::Init(const char* initString, int multiple){
 
     }
     if (getAxesPositions(axisPosArr) == asynSuccess){
-    	for (int axis=0; axis < numAxes; axis++)
-    		(pAxes[axis])->setDoubleParam(motorPosition_, (double) axisPosArr[axis]);
+        for (int axis=0; axis < numAxes; axis++)
+            (pAxes[axis])->setDoubleParam(motorPosition_, (double) axisPosArr[axis]);
     }
     unlock();
     return asynSuccess;
@@ -687,16 +687,16 @@ void omsBaseController::omsPoller()
 
         haveLimits = true;
         limitFlags =0;
-		if ((sendReceiveLock("AM;QL;", pollInputBuffer, sizeof(pollInputBuffer)) == asynSuccess)){
-			if (1 != sscanf(pollInputBuffer, "%x", &limitFlags)){
-				Debug(1,"%s:%s:%s: error converting limits: %s\n", driverName, functionName, this->portName, pollInputBuffer);
-				haveLimits = false;
-			}
-		}
-		else {
-			haveLimits = false;
-			Debug(1,"%s:%s:%s: error reading limits %s\n", driverName, functionName, this->portName, pollInputBuffer);
-		}
+        if ((sendReceiveLock("AM;QL;", pollInputBuffer, sizeof(pollInputBuffer)) == asynSuccess)){
+            if (1 != sscanf(pollInputBuffer, "%x", &limitFlags)){
+                Debug(1,"%s:%s:%s: error converting limits: %s\n", driverName, functionName, this->portName, pollInputBuffer);
+                haveLimits = false;
+            }
+        }
+        else {
+            haveLimits = false;
+            Debug(1,"%s:%s:%s: error reading limits %s\n", driverName, functionName, this->portName, pollInputBuffer);
+        }
         if (enabled) watchdogOK();
 
         anyMoving = 0;
@@ -743,24 +743,24 @@ void omsBaseController::omsPoller()
                         pAxis->setIntegerParam(motorStatusMoving_, 0);
                         if (pAxis->homing) pAxis->homing = 0;
                         if (statusBuffer[i*STATUSSTRINGLEN] == 'P')
-                        	pAxis->setIntegerParam(motorStatusHighLimit_, 1);
+                            pAxis->setIntegerParam(motorStatusHighLimit_, 1);
                         else
-                        	pAxis->setIntegerParam(motorStatusLowLimit_, 1);
+                            pAxis->setIntegerParam(motorStatusLowLimit_, 1);
                     }
                     else {
-						pAxis->moveDelay++ ;
-						if (pAxis->moveDelay >= 5) {
-							Debug(4, "%s:%s:%s: setting Problem Flag axis %d\n", driverName, functionName, portName, i);
-							pAxis->setIntegerParam(motorStatusDone_, 1);
-							pAxis->setIntegerParam(motorStatusMoving_, 0);
-							pAxis->setIntegerParam(motorStatusProblem_, 1);
-							pAxis->moveDelay = 0;
-							if (pAxis->homing) pAxis->homing = 0;
-							Debug(1, "%s:%s:%s: stop axis %d, moveDelay count %d\n", driverName, functionName,
-									this->portName, i, pAxis->moveDelay );
-						}
-						Debug(2, "%s:%s:%s: moveDelay axis %d, count %d\n", driverName, functionName,
-								this->portName, i, pAxis->moveDelay );
+                        pAxis->moveDelay++ ;
+                        if (pAxis->moveDelay >= 5) {
+                            Debug(4, "%s:%s:%s: setting Problem Flag axis %d\n", driverName, functionName, portName, i);
+                            pAxis->setIntegerParam(motorStatusDone_, 1);
+                            pAxis->setIntegerParam(motorStatusMoving_, 0);
+                            pAxis->setIntegerParam(motorStatusProblem_, 1);
+                            pAxis->moveDelay = 0;
+                            if (pAxis->homing) pAxis->homing = 0;
+                            Debug(1, "%s:%s:%s: stop axis %d, moveDelay count %d\n", driverName, functionName,
+                                this->portName, i, pAxis->moveDelay );
+                        }
+                        Debug(2, "%s:%s:%s: moveDelay axis %d, count %d\n", driverName, functionName,
+                            this->portName, i, pAxis->moveDelay );
                     }
                }
             }
@@ -776,10 +776,10 @@ void omsBaseController::omsPoller()
 
             /* check limits */
             if (haveLimits){
-            	int limitOffset = 0;
-            	if (i > 7) limitOffset = 8;			// same as limitOffset = 16 ; i -= 8
+                int limitOffset = 0;
+                if (i > 7) limitOffset = 8;                     // same as limitOffset = 16 ; i -= 8
                 if (((limitFlags & (1 << (i+limitOffset))) > 0) ^ (pAxis->getLimitInvert()))
-                	pAxis->setIntegerParam(motorStatusLowLimit_, 1);
+                    pAxis->setIntegerParam(motorStatusLowLimit_, 1);
                 else
                     pAxis->setIntegerParam(motorStatusLowLimit_, 0);
                 if (((limitFlags & (1 << (i+limitOffset+8))) > 0) ^ (pAxis->getLimitInvert()))

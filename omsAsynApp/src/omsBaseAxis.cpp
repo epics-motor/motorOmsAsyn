@@ -74,9 +74,9 @@ asynStatus omsBaseAxis::move(double position, int relative, double min_velocity,
         rela = 0;
 
     if ( position < 0.0)
-    	pos = (epicsInt32) (position - 0.5);
+        pos = (epicsInt32) (position - 0.5);
     else
-    	pos = (epicsInt32) (position + 0.5);
+        pos = (epicsInt32) (position + 0.5);
 
     if (abs(pos) > 67000000){
         asynPrint(pasynUser_, ASYN_TRACE_ERROR,

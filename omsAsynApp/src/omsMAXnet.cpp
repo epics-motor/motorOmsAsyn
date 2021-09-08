@@ -242,7 +242,7 @@ asynStatus omsMAXnet::sendReceive(const char *outputBuff, char *inputBuff, unsig
         }
         localBuffer[nRead] = '\0';
         outString = localBuffer;
-    	while (*outString == 6) ++outString;
+        while (*outString == 6) ++outString;
         if (status == asynSuccess) {
             if (isNotification(outString) && (notificationCounter > 0)) {
                 --notificationCounter;
@@ -268,11 +268,11 @@ asynStatus omsMAXnet::sendReceive(const char *outputBuff, char *inputBuff, unsig
         nRead += nReadnext;
     }
     localBuffer[nRead] = '\0';
-	// cut off a leading CR, NL, /006
+    // cut off a leading CR, NL, /006
     outString = localBuffer;
     while ((*outString == 6)||(*outString == 13)||(*outString == 10)) ++outString;
 
-	// if input data is a notification read until expected data arrived
+    // if input data is a notification read until expected data arrived
     while ((status == asynSuccess) && isNotification(outString)) {
         nRead=0;
         nReadnext=0;
@@ -284,15 +284,15 @@ asynStatus omsMAXnet::sendReceive(const char *outputBuff, char *inputBuff, unsig
             nRead += nReadnext;
         }
         localBuffer[nRead] = '\0';
-    	// cut off a leading CR, NL, /006
+        // cut off a leading CR, NL, /006
         outString = localBuffer;
         while ((*outString == 6)||(*outString == 13)||(*outString == 10)) ++outString;
-    	if (notificationCounter > 0) --notificationCounter;
+        if (notificationCounter > 0) --notificationCounter;
     }
 
-	// copy into inputBuffer
-	strncpy(inputBuff, outString, inputSize);
-	inputBuff[inputSize-1] = '\0';
+    // copy into inputBuffer
+    strncpy(inputBuff, outString, inputSize);
+    inputBuff[inputSize-1] = '\0';
 
     Debug(4, "omsMAXnet::sendReceive: read: %s \n", inputBuff);
 
@@ -313,7 +313,7 @@ int omsMAXnet::isNotification (char *buffer) {
         }
         else {
             Debug(2,"%s:%s:%s: Interrupt notification: %s\n",
-            		driverName, functionName, portName, buffer);
+                driverName, functionName, portName, buffer);
             epicsEventSignal(pollEventId_);
         }
         return 1;
