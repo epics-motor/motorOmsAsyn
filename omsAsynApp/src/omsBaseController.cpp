@@ -673,7 +673,7 @@ void omsBaseController::omsPoller()
         }
 
         haveVeloArray = true;
-        if (getAxesArray((char*) "AM;RV;", veloArr) != asynSuccess){
+        if (getAxesArray("AM;RV;", veloArr) != asynSuccess){
             haveVeloArray = false;
             Debug(1,"%s:%s:%s: Error executing command Report Velocity (RV)\n", driverName, functionName, this->portName);
         }
@@ -840,7 +840,7 @@ void omsBaseController::omsPoller()
 
 asynStatus omsBaseController::getEncoderPositions(epicsInt32 encPosArr[OMS_MAX_AXES])
 {
-    return getAxesArray((char*) "AM PE;", encPosArr);
+    return getAxesArray("AM PE;", encPosArr);
 }
 
 asynStatus omsBaseController::getClosedLoopStatus(int clstatus[OMS_MAX_AXES])
@@ -894,7 +894,7 @@ asynStatus omsBaseController::sanityCheck()
         char outputBuffer[10];
         // check the remaining command buffer size, which must not overflow
         sanityCounter = 0;
-        if (getAxesArray((char*) "AM;RQC", commandBufferSize) != asynSuccess){
+        if (getAxesArray("AM;RQC", commandBufferSize) != asynSuccess){
             errlogPrintf("%s:%s:%s: Error executing command: Report Command Queue (RCQ)\n", driverName, functionName, this->portName);
         }
         for (int i=0; i < numAxes; i++) {
@@ -988,7 +988,7 @@ asynStatus omsBaseController::sendReceiveLock(const char *outputBuff, char *inpu
 
 asynStatus omsBaseController::getAxesStatus(char *inputBuff, int inputSize, bool *done)
 {
-    char *outputBuff = (char*) "AM;RI;";
+    const char *outputBuff = "AM;RI;";
     asynStatus status;
 
     *done=false;
@@ -1009,10 +1009,10 @@ asynStatus omsBaseController::getAxesStatus(char *inputBuff, int inputSize, bool
 
 asynStatus omsBaseController::getAxesPositions(int positions[OMS_MAX_AXES] )
 {
-    return getAxesArray((char*) "AM PP;", positions);
+    return getAxesArray("AM PP;", positions);
 }
 
-asynStatus omsBaseController::getAxesArray(char* cmd, int positions[OMS_MAX_AXES] )
+asynStatus omsBaseController::getAxesArray(const char* cmd, int positions[OMS_MAX_AXES] )
 {
     //  maximum length of the ascii position / velocity values is 11 chars + comma
     //  -2147483648 <-> 2147483647

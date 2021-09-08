@@ -51,7 +51,7 @@ protected:
     asynStatus sendOnlyLock(const char *);
     virtual omsBaseAxis* getAxis(asynUser *pasynUser);
     virtual omsBaseAxis* getAxis(int);
-    asynStatus getAxesArray(char*, int positions[OMS_MAX_AXES]);
+    asynStatus getAxesArray(const char*, int positions[OMS_MAX_AXES]);
     virtual asynStatus getAxesPositions(int positions[OMS_MAX_AXES]);
     virtual asynStatus getAxesStatus(char *, int, bool *);
     virtual asynStatus getEncoderPositions(epicsInt32 encPosArr[OMS_MAX_AXES]);

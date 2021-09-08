@@ -121,7 +121,7 @@ asynStatus omsBaseAxis::home(double min_velocity, double max_velocity, double ac
 
     asynStatus status = asynError;
     char buff[60];
-    char *direction[2] = {(char*) "HR", (char*) "HM"};
+    const char *direction[2] = {"HR", "HM"};
     epicsInt32 minvelo, velo, acc;
 
     velo = (epicsInt32) max_velocity;
