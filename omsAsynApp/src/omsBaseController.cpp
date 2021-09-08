@@ -272,21 +272,23 @@ asynStatus omsBaseController::writeInt32(asynUser *pasynUser, epicsInt32 value)
     }
     else if (function == motorClosedLoop_)
     {
+        static char outputBuffer[8];
         if (value) {
             asynPrint(pasynUser, ASYN_TRACE_FLOW, "%s:%s:%s axis %d closed loop enable\n",
                   driverName, functionName, portName, pAxis->axisNo_);
             if (firmwareMin(1,30,0))
-                status = sendReplace(pAxis, (char*) "A? CL1");
+                strcpy(outputBuffer,"A? CL1");
             else
-                status = sendReplace(pAxis, (char*) "A? HN");
+                strcpy(outputBuffer,"A? HN");
         } else {
             asynPrint(pasynUser, ASYN_TRACE_FLOW, "%s:%s:%s SetInteger axis %d closed loop disable\n",
                   driverName, functionName, portName, pAxis->axisNo_);
             if (firmwareMin(1,30,0))
-                status = sendReplace(pAxis, (char*) "A? CL0");
+                strcpy(outputBuffer,"A? CL0");
             else
-                status = sendReplace(pAxis, (char*) "A? HF");
+                strcpy(outputBuffer,"A? HF");
         }
+        status = sendReplace(pAxis, outputBuffer);
     }
     else if (function == motorMoveToHome_) {
         /* avoid  asynMotorController::writeInt32 to handle this*/
