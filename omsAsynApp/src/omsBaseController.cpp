@@ -96,9 +96,9 @@ omsBaseController::omsBaseController(const char *portName, int maxAxes, int prio
     createParam(0, motorOmsStringSendString, asynParamOctet, &sendIndex);
     createParam(0, motorOmsStringSendRecvString, asynParamOctet, &sendReceiveIndex);
     createParam(0, motorOmsStringRecvString, asynParamOctet, &receiveIndex);
-    setStringParam(0, sendIndex, (char *) "");
-    setStringParam(0, sendReceiveIndex, (char *) "");
-    setStringParam(0, receiveIndex, (char *) "");
+    setStringParam(0, sendIndex, "");
+    setStringParam(0, sendReceiveIndex, "");
+    setStringParam(0, receiveIndex, "");
 
     /* Set an EPICS exit handler */
     epicsAtExit(omsBaseController::callShutdown, this);
@@ -194,7 +194,7 @@ asynStatus omsBaseController::writeOctet(asynUser *pasynUser, const char *value,
         status = sendReceiveLock(value, inBuffer, sizeof(inBuffer));
         if (status == asynSuccess){
             /* Set the parameter in the parameter library. */
-            status = (asynStatus)setStringParam(pAxis->axisNo_, receiveIndex, (char *)inBuffer);
+            status = (asynStatus)setStringParam(pAxis->axisNo_, receiveIndex, inBuffer);
             status = (asynStatus)callParamCallbacks(pAxis->axisNo_);
             asynPrint(pasynUser, ASYN_TRACE_ERROR, "%s:%s:%s: answer is %s\n",
                     driverName, functionName, portName, inBuffer);
@@ -246,7 +246,7 @@ asynStatus omsBaseController::readInt32(asynUser *pasynUser, epicsInt32 *value)
          }
      } else {
           // Call base class
-   	      status = asynMotorController::readInt32(pasynUser, value);
+          status = asynMotorController::readInt32(pasynUser, value);
      }
 
 
@@ -272,30 +272,32 @@ asynStatus omsBaseController::writeInt32(asynUser *pasynUser, epicsInt32 value)
     }
     else if (function == motorClosedLoop_)
     {
+        static char outputBuffer[8];
         if (value) {
             asynPrint(pasynUser, ASYN_TRACE_FLOW, "%s:%s:%s axis %d closed loop enable\n",
                   driverName, functionName, portName, pAxis->axisNo_);
             if (firmwareMin(1,30,0))
-                status = sendReplace(pAxis, (char*) "A? CL1");
+                strcpy(outputBuffer,"A? CL1");
             else
-                status = sendReplace(pAxis, (char*) "A? HN");
+                strcpy(outputBuffer,"A? HN");
         } else {
             asynPrint(pasynUser, ASYN_TRACE_FLOW, "%s:%s:%s SetInteger axis %d closed loop disable\n",
                   driverName, functionName, portName, pAxis->axisNo_);
             if (firmwareMin(1,30,0))
-                status = sendReplace(pAxis, (char*) "A? CL0");
+                strcpy(outputBuffer,"A? CL0");
             else
-                status = sendReplace(pAxis, (char*) "A? HF");
+                strcpy(outputBuffer,"A? HF");
         }
+        status = sendReplace(pAxis, outputBuffer);
     }
     else if (function == motorMoveToHome_) {
         /* avoid  asynMotorController::writeInt32 to handle this*/
     }
     else if (function == pollIndex)
     {
-    	 if (value) {
-    		 wakeupPoller();
-    	 }
+        if (value) {
+            wakeupPoller();
+        }
     }
     else {
         return asynMotorController::writeInt32(pasynUser, value);
@@ -428,7 +430,7 @@ asynStatus omsBaseController::getFirmwareVersion()
 
     while (status != asynSuccess && count < 3){
         epicsThreadSleep(1.0);
-        status = sendReceiveLock((char*) "WY", inputBuffer, sizeof(inputBuffer));
+        status = sendReceiveLock("WY", inputBuffer, sizeof(inputBuffer));
         count++;
         errlogPrintf("OMS Firmware Version: %s\n", inputBuffer);
     }
@@ -488,7 +490,7 @@ asynStatus omsBaseController::Init(const char* initString, int multiple){
     epicsThreadSleep(0.5);
 
     /* get Positions of all axes */
-    sendReceiveLock((char*) "AA RP;", inputBuffer, sizeof(inputBuffer));
+    sendReceiveLock("AA RP;", inputBuffer, sizeof(inputBuffer));
 
     if (numAxes > OMS_MAX_AXES) {
         errlogPrintf("omsBaseController:Init: number of axes=%d exceeds allowed maximum\n", numAxes);
@@ -561,8 +563,8 @@ asynStatus omsBaseController::Init(const char* initString, int multiple){
 
     }
     if (getAxesPositions(axisPosArr) == asynSuccess){
-    	for (int axis=0; axis < numAxes; axis++)
-    		(pAxes[axis])->setDoubleParam(motorPosition_, (double) axisPosArr[axis]);
+        for (int axis=0; axis < numAxes; axis++)
+            (pAxes[axis])->setDoubleParam(motorPosition_, (double) axisPosArr[axis]);
     }
     unlock();
     return asynSuccess;
@@ -673,28 +675,28 @@ void omsBaseController::omsPoller()
         }
 
         haveVeloArray = true;
-        if (getAxesArray((char*) "AM;RV;", veloArr) != asynSuccess){
+        if (getAxesArray("AM;RV;", veloArr) != asynSuccess){
             haveVeloArray = false;
             Debug(1,"%s:%s:%s: Error executing command Report Velocity (RV)\n", driverName, functionName, this->portName);
         }
         haveEncStatus = true;
-        if (sendReceiveLock((char*) "AM;EA;", encStatusBuffer, sizeof(encStatusBuffer)) != asynSuccess){
+        if (sendReceiveLock("AM;EA;", encStatusBuffer, sizeof(encStatusBuffer)) != asynSuccess){
             haveEncStatus = false;
             Debug(1,"%s:%s:%s: Error reading encoder status buffer >%s<\n", driverName, functionName, this->portName, encStatusBuffer);
         }
 
         haveLimits = true;
         limitFlags =0;
-		if ((sendReceiveLock((char*) "AM;QL;", pollInputBuffer, sizeof(pollInputBuffer)) == asynSuccess)){
-			if (1 != sscanf(pollInputBuffer, "%x", &limitFlags)){
-				Debug(1,"%s:%s:%s: error converting limits: %s\n", driverName, functionName, this->portName, pollInputBuffer);
-				haveLimits = false;
-			}
-		}
-		else {
-			haveLimits = false;
-			Debug(1,"%s:%s:%s: error reading limits %s\n", driverName, functionName, this->portName, pollInputBuffer);
-		}
+        if ((sendReceiveLock("AM;QL;", pollInputBuffer, sizeof(pollInputBuffer)) == asynSuccess)){
+            if (1 != sscanf(pollInputBuffer, "%x", &limitFlags)){
+                Debug(1,"%s:%s:%s: error converting limits: %s\n", driverName, functionName, this->portName, pollInputBuffer);
+                haveLimits = false;
+            }
+        }
+        else {
+            haveLimits = false;
+            Debug(1,"%s:%s:%s: error reading limits %s\n", driverName, functionName, this->portName, pollInputBuffer);
+        }
         if (enabled) watchdogOK();
 
         anyMoving = 0;
@@ -741,24 +743,24 @@ void omsBaseController::omsPoller()
                         pAxis->setIntegerParam(motorStatusMoving_, 0);
                         if (pAxis->homing) pAxis->homing = 0;
                         if (statusBuffer[i*STATUSSTRINGLEN] == 'P')
-                        	pAxis->setIntegerParam(motorStatusHighLimit_, 1);
+                            pAxis->setIntegerParam(motorStatusHighLimit_, 1);
                         else
-                        	pAxis->setIntegerParam(motorStatusLowLimit_, 1);
+                            pAxis->setIntegerParam(motorStatusLowLimit_, 1);
                     }
                     else {
-						pAxis->moveDelay++ ;
-						if (pAxis->moveDelay >= 5) {
-							Debug(4, "%s:%s:%s: setting Problem Flag axis %d\n", driverName, functionName, portName, i);
-							pAxis->setIntegerParam(motorStatusDone_, 1);
-							pAxis->setIntegerParam(motorStatusMoving_, 0);
-							pAxis->setIntegerParam(motorStatusProblem_, 1);
-							pAxis->moveDelay = 0;
-							if (pAxis->homing) pAxis->homing = 0;
-							Debug(1, "%s:%s:%s: stop axis %d, moveDelay count %d\n", driverName, functionName,
-									this->portName, i, pAxis->moveDelay );
-						}
-						Debug(2, "%s:%s:%s: moveDelay axis %d, count %d\n", driverName, functionName,
-								this->portName, i, pAxis->moveDelay );
+                        pAxis->moveDelay++ ;
+                        if (pAxis->moveDelay >= 5) {
+                            Debug(4, "%s:%s:%s: setting Problem Flag axis %d\n", driverName, functionName, portName, i);
+                            pAxis->setIntegerParam(motorStatusDone_, 1);
+                            pAxis->setIntegerParam(motorStatusMoving_, 0);
+                            pAxis->setIntegerParam(motorStatusProblem_, 1);
+                            pAxis->moveDelay = 0;
+                            if (pAxis->homing) pAxis->homing = 0;
+                            Debug(1, "%s:%s:%s: stop axis %d, moveDelay count %d\n", driverName, functionName,
+                                this->portName, i, pAxis->moveDelay );
+                        }
+                        Debug(2, "%s:%s:%s: moveDelay axis %d, count %d\n", driverName, functionName,
+                            this->portName, i, pAxis->moveDelay );
                     }
                }
             }
@@ -774,10 +776,10 @@ void omsBaseController::omsPoller()
 
             /* check limits */
             if (haveLimits){
-            	int limitOffset = 0;
-            	if (i > 7) limitOffset = 8;			// same as limitOffset = 16 ; i -= 8
+                int limitOffset = 0;
+                if (i > 7) limitOffset = 8;                     // same as limitOffset = 16 ; i -= 8
                 if (((limitFlags & (1 << (i+limitOffset))) > 0) ^ (pAxis->getLimitInvert()))
-                	pAxis->setIntegerParam(motorStatusLowLimit_, 1);
+                    pAxis->setIntegerParam(motorStatusLowLimit_, 1);
                 else
                     pAxis->setIntegerParam(motorStatusLowLimit_, 0);
                 if (((limitFlags & (1 << (i+limitOffset+8))) > 0) ^ (pAxis->getLimitInvert()))
@@ -840,7 +842,7 @@ void omsBaseController::omsPoller()
 
 asynStatus omsBaseController::getEncoderPositions(epicsInt32 encPosArr[OMS_MAX_AXES])
 {
-    return getAxesArray((char*) "AM PE;", encPosArr);
+    return getAxesArray("AM PE;", encPosArr);
 }
 
 asynStatus omsBaseController::getClosedLoopStatus(int clstatus[OMS_MAX_AXES])
@@ -850,7 +852,7 @@ asynStatus omsBaseController::getClosedLoopStatus(int clstatus[OMS_MAX_AXES])
 
     if (firmwareMin(1,30,0)){
         pollInputBuffer[0] = '\0';
-        status = sendReceiveLock((char*) "AM;CL?;", pollInputBuffer, sizeof(pollInputBuffer));
+        status = sendReceiveLock("AM;CL?;", pollInputBuffer, sizeof(pollInputBuffer));
         if (status == asynSuccess) {
             for (int i=0; i < numAxes; ++i) {
                 status = getSubstring(i, pollInputBuffer, clBuffer, sizeof(clBuffer));
@@ -894,7 +896,7 @@ asynStatus omsBaseController::sanityCheck()
         char outputBuffer[10];
         // check the remaining command buffer size, which must not overflow
         sanityCounter = 0;
-        if (getAxesArray((char*) "AM;RQC", commandBufferSize) != asynSuccess){
+        if (getAxesArray("AM;RQC", commandBufferSize) != asynSuccess){
             errlogPrintf("%s:%s:%s: Error executing command: Report Command Queue (RCQ)\n", driverName, functionName, this->portName);
         }
         for (int i=0; i < numAxes; i++) {
@@ -904,7 +906,7 @@ asynStatus omsBaseController::sanityCheck()
                 errlogPrintf("%s:%s:%s: Caution: flushing command queue axis %d,remaining size %d\n",
                                     driverName, functionName, portName, pAxis->axisNo_, commandBufferSize[i]);
                 strcpy(outputBuffer,"A?;FL;");
-                sendReplace(pAxis, (char*) outputBuffer);
+                sendReplace(pAxis, outputBuffer);
                 status = asynError;
             }
         }
@@ -988,7 +990,7 @@ asynStatus omsBaseController::sendReceiveLock(const char *outputBuff, char *inpu
 
 asynStatus omsBaseController::getAxesStatus(char *inputBuff, int inputSize, bool *done)
 {
-    char *outputBuff = (char*) "AM;RI;";
+    const char *outputBuff = "AM;RI;";
     asynStatus status;
 
     *done=false;
@@ -1009,10 +1011,10 @@ asynStatus omsBaseController::getAxesStatus(char *inputBuff, int inputSize, bool
 
 asynStatus omsBaseController::getAxesPositions(int positions[OMS_MAX_AXES] )
 {
-    return getAxesArray((char*) "AM PP;", positions);
+    return getAxesArray("AM PP;", positions);
 }
 
-asynStatus omsBaseController::getAxesArray(char* cmd, int positions[OMS_MAX_AXES] )
+asynStatus omsBaseController::getAxesArray(const char* cmd, int positions[OMS_MAX_AXES] )
 {
     //  maximum length of the ascii position / velocity values is 11 chars + comma
     //  -2147483648 <-> 2147483647
@@ -1115,7 +1117,7 @@ bool omsBaseController::watchdogOK()
     const char* functionName = "watchdogOK";
 
     if (useWatchdog && (fwMinor >= 33)) {
-        sendReceiveLock((char*) "#WS", (char*) inputBuff, sizeof(inputBuff));
+        sendReceiveLock("#WS", inputBuff, sizeof(inputBuff));
         if ((inputBuff[0] == '=') && (inputBuff[1] != '0')) {
             errlogPrintf("%s:%s:%s: *** CAUTION watchdog not running, disabling card ***\n",
                     driverName, functionName, portName);

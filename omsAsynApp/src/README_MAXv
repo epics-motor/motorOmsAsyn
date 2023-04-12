@@ -23,7 +23,7 @@ There are two alternatives to configure the driver in the startup script
 
    e.g.
    omsMAXvSetup(1, 16, 0x0000, 190, 5, 10)
-	MAXvConfig(0,"MAXv0", 8, 100, 500, "AX LH PSO;")
+   MAXvConfig(0,"MAXv0", 8, 100, 500, "AX LH PSO;")
 
 2. "new"
    if you need more flexibility (nonconsecutive board addresses possible) use this

@@ -74,9 +74,9 @@ asynStatus omsBaseAxis::move(double position, int relative, double min_velocity,
         rela = 0;
 
     if ( position < 0.0)
-    	pos = (epicsInt32) (position - 0.5);
+        pos = (epicsInt32) (position - 0.5);
     else
-    	pos = (epicsInt32) (position + 0.5);
+        pos = (epicsInt32) (position + 0.5);
 
     if (abs(pos) > 67000000){
         asynPrint(pasynUser_, ASYN_TRACE_ERROR,
@@ -121,10 +121,8 @@ asynStatus omsBaseAxis::home(double min_velocity, double max_velocity, double ac
 
     asynStatus status = asynError;
     char buff[60];
-    char *direction[2] = {(char*) "HR", (char*) "HM"};
-    epicsInt32 minvelo, velo, acc, fw = 0;
-
-    if (forwards) fw = 1;
+    const char *direction[2] = {"HR", "HM"};
+    epicsInt32 minvelo, velo, acc;
 
     velo = (epicsInt32) max_velocity;
     if (velo < 1) velo = 1;
