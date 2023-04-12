@@ -1,5 +1,23 @@
 # motorOmsAsyn Releases
 
+## __R1-0-3 (2023-04-12)__
+R1-0-3 is a release based on the master branch.
+
+### Changes since R1-0-1
+
+#### New features
+* None
+
+#### Modifications to existing features
+* None
+
+#### Bug fixes
+* Pull request [#6](https://github.com/epics-motor/motorOmsAsyn/pull/6): Type fixes from [Dirk Zimoch](https://github.com/dirk-zimoch)
+
+#### Continuous integration
+* Added ci-scripts (v3.0.1)
+* Configured to use Github Actions for CI
+
 ## __R1-0-2 (2020-05-14)__
 R1-0-2 is a release based on the master branch.  
 
