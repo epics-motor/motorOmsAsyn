@@ -1,3 +1,4 @@
+registrar(OmsMXAAsynRegister)
 registrar(OmsMAXnetAsynRegister)
 registrar(OmsMAXvAsynRegister)
 #registrar(omsMAXvEncFuncAsynRegister)
@@ -5,5 +6,4 @@ registrar(OmsMAXvAsynRegister)
 #variable(motorOMSBASEdebug)
 #variable(motorMAXvEncFuncdebug)
 #variable(motorMAXnetdebug)
-
-
+#variable(motorMXAdebug)

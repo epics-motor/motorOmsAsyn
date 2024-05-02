@@ -276,14 +276,14 @@ asynStatus omsBaseController::writeInt32(asynUser *pasynUser, epicsInt32 value)
         if (value) {
             asynPrint(pasynUser, ASYN_TRACE_FLOW, "%s:%s:%s axis %d closed loop enable\n",
                   driverName, functionName, portName, pAxis->axisNo_);
-            if (firmwareMin(1,30,0))
+            if (firmwareMin(minFwMajor,minFwMinor,minFwRevision))
                 strcpy(outputBuffer,"A? CL1");
             else
                 strcpy(outputBuffer,"A? HN");
         } else {
             asynPrint(pasynUser, ASYN_TRACE_FLOW, "%s:%s:%s SetInteger axis %d closed loop disable\n",
                   driverName, functionName, portName, pAxis->axisNo_);
-            if (firmwareMin(1,30,0))
+            if (firmwareMin(minFwMajor,minFwMinor,minFwRevision))
                 strcpy(outputBuffer,"A? CL0");
             else
                 strcpy(outputBuffer,"A? HF");
@@ -525,7 +525,7 @@ asynStatus omsBaseController::Init(const char* initString, int multiple){
         pAxis->setIntegerParam(motorStatusCommsError_, 0);
 
         /* Determine if encoder is present and if mode is stepper or servo. */
-        if (firmwareMin(1,30,0))
+        if (firmwareMin(minFwMajor,minFwMinor,minFwRevision))
             strcpy(outputBuffer,"A? PS?");
         else
             strcpy(outputBuffer,"A? ?PS");
@@ -549,16 +549,16 @@ asynStatus omsBaseController::Init(const char* initString, int multiple){
 
         /* Determine limit true state high or low */
         /* CAUTION you need firmware version 1.30 or higher to do this */
-        if (firmwareMin(1,30,0))
+        if (firmwareMin(minFwMajor,minFwMinor,minFwRevision))
             strcpy(outputBuffer,"A? LT?");
         else
             strcpy(outputBuffer,"A? ?LS");
         sendReceiveReplace(pAxis, outputBuffer, inputBuffer, sizeof(inputBuffer));
         /*we expect any of "=l" or "=h"  */
-        if (inputBuffer[1] == 'l'){
+        if (inputBuffer[1] == 'l' || inputBuffer[1] == 'L'){
             pAxis->setLimitInvert(1);
         }
-        else if (inputBuffer[1] == 'h'){
+        else if (inputBuffer[1] == 'h' || inputBuffer[1] == 'H'){
             pAxis->setLimitInvert(0);
         }
         else
@@ -853,7 +853,7 @@ asynStatus omsBaseController::getClosedLoopStatus(int clstatus[OMS_MAX_AXES])
     asynStatus status = asynSuccess;
     char clBuffer[9];
 
-    if (firmwareMin(1,30,0)){
+    if (firmwareMin(minFwMajor,minFwMinor,minFwRevision)){
         pollInputBuffer[0] = '\0';
         status = sendReceiveLock("AM;CL?;", pollInputBuffer, sizeof(pollInputBuffer));
         if (status == asynSuccess) {
@@ -1118,7 +1118,8 @@ bool omsBaseController::watchdogOK()
 {
     char inputBuff[10] = "";
     const char* functionName = "watchdogOK";
-
+    
+    // the fwMinor >= 33 check isn't going to succeed for the MXA.  how to handle that?
     if (useWatchdog && (fwMinor >= 33)) {
         sendReceiveLock("#WS", inputBuff, sizeof(inputBuff));
         if ((inputBuff[0] == '=') && (inputBuff[1] != '0')) {

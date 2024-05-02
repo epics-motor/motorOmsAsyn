@@ -91,7 +91,11 @@ omsMAXv::omsMAXv(const char* portName, int numAxes, int slotNo, const char* init
 {
     const char* functionName = "omsMAXv";
     epicsAddressType vmeAddrType = atVMEA16;
-
+    
+    minFwMajor = 1;
+    minFwMinor = 30;
+    minFwRevision = 0;
+    
     if (vmeAddr < 0) {
         errlogPrintf("%s: invalid VME address: 0\n", functionName);
         return;
