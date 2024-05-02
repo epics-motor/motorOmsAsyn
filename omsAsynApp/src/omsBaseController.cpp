@@ -438,6 +438,9 @@ asynStatus omsBaseController::getFirmwareVersion()
     if ((p = strstr(inputBuffer, "ver:B"))){
         count = sscanf(p, "ver:B%d.%d.%d,", &fwMajor, &fwMinor, &fwRevision);
     }
+    else if ((p = strstr(inputBuffer, "ver:S"))){
+        count = sscanf(p, "ver:S%d.%d.%d,", &fwMajor, &fwMinor, &fwRevision);
+    }
     else if ((p = strstr(inputBuffer, "ver:"))){
         count = sscanf(p, "ver:%d.%d.%d,", &fwMajor, &fwMinor, &fwRevision);
     }
