@@ -1,22 +1,17 @@
 /*
-FILENAME...     omsMAXnet.cpp
-USAGE...        Pro-Dex OMS MAXnet asyn motor controller support
+FILENAME...     omsMXA.cpp
+USAGE...        Pro-Dex OMS MXA asyn motor controller support
 
 */
-
-/*
- *  Created on: 10/2010
- *      Author: eden
- */
 
 #include <string.h>
 
 #include "asynOctetSyncIO.h"
-#include "omsMAXnet.h"
+#include "omsMXA.h"
 
 #ifdef __GNUG__
     #ifdef      DEBUG
-        #define Debug(l, f, args...) {if (l & motorMAXnetdebug) \
+        #define Debug(l, f, args...) {if (l & motorMXAdebug) \
                                   errlogPrintf(f, ## args);}
     #else
         #define Debug(l, f, args...)
@@ -25,36 +20,36 @@ USAGE...        Pro-Dex OMS MAXnet asyn motor controller support
     #define Debug
 #endif
 
-static const char *driverName = "omsMAXnetDriver";
-volatile int motorMAXnetdebug = 0;
-extern "C" {epicsExportAddress(int, motorMAXnetdebug);}
+static const char *driverName = "omsMXADriver";
+volatile int motorMXAdebug = 0;
+extern "C" {epicsExportAddress(int, motorMXAdebug);}
 
-#define MAXnet_MAX_BUFFERLENGTH 250
+#define MXA_MAX_BUFFERLENGTH 250
 
 static void connectCallback(asynUser *pasynUser, asynException exception)
 {
     asynStatus status;
     int connected = 0;
-    omsMAXnet* pController = (omsMAXnet*)pasynUser->userPvt;
+    omsMXA* pController = (omsMXA*)pasynUser->userPvt;
 
     if (exception == asynExceptionConnect) {
         status = pasynManager->isConnected(pasynUser, &connected);
         if (connected){
-            if (motorMAXnetdebug & 8) asynPrint(pasynUser, ASYN_TRACE_FLOW,
-                "MAXnet connectCallback:  TCP-Port connected\n");
+            if (motorMXAdebug & 8) asynPrint(pasynUser, ASYN_TRACE_FLOW,
+                "MXA connectCallback:  TCP-Port connected\n");
             pController->portConnected = 1;
         }
         else {
-            if (motorMAXnetdebug & 4) asynPrint(pasynUser, ASYN_TRACE_FLOW,
-                "MAXnet connectCallback:  TCP-Port disconnected\n");
+            if (motorMXAdebug & 4) asynPrint(pasynUser, ASYN_TRACE_FLOW,
+                "MXA connectCallback:  TCP-Port disconnected\n");
             pController->portConnected = 0;
         }
     }
 }
 
-void omsMAXnet::asynCallback(void *drvPvt, asynUser *pasynUser, char *data, size_t len, int eomReason)
+void omsMXA::asynCallback(void *drvPvt, asynUser *pasynUser, char *data, size_t len, int eomReason)
 {
-    omsMAXnet* pController = (omsMAXnet*)drvPvt;
+    omsMXA* pController = (omsMXA*)drvPvt;
 
 /* If the string has a "%", it is a notification, increment counter and
  * send a signal to the poller task which will trigger a poll */
@@ -63,7 +58,7 @@ void omsMAXnet::asynCallback(void *drvPvt, asynUser *pasynUser, char *data, size
         char* pos = strchr(data, '%');
         epicsEventSignal(pController->pollEventId_);
         while (pos != NULL){
-            Debug(2, "omsMAXnet::asynCallback: %s (%d)\n", data, len);
+            Debug(2, "omsMXA::asynCallback: %s (%d)\n", data, len);
             pController->notificationMutex->lock();
             ++pController->notificationCounter;
             pController->notificationMutex->unlock();
@@ -73,13 +68,13 @@ void omsMAXnet::asynCallback(void *drvPvt, asynUser *pasynUser, char *data, size
     }
 }
 
-omsMAXnet::omsMAXnet(const char* portName, int numAxes, const char* serialPortName, const char* initString, int priority, int stackSize)
+omsMXA::omsMXA(const char* portName, int numAxes, const char* serialPortName, const char* initString, int priority, int stackSize)
     : omsBaseController(portName, numAxes, priority, stackSize, 0){
 
     asynStatus status;
     asynInterface *pasynInterface;
 
-    controllerType = epicsStrDup("MAXnet");
+    controllerType = epicsStrDup("MXA");
 
     notificationMutex = new epicsMutex();
     notificationCounter = 0;
@@ -88,7 +83,7 @@ omsMAXnet::omsMAXnet(const char* portName, int numAxes, const char* serialPortNa
     int eoslen=0;
 
     minFwMajor = 1;
-    minFwMinor = 30;
+    minFwMinor = 0;
     minFwRevision = 0;
     
     serialPortName = epicsStrDup(serialPortName);
@@ -98,13 +93,13 @@ omsMAXnet::omsMAXnet(const char* portName, int numAxes, const char* serialPortNa
 
     status = pasynManager->connectDevice(pasynUserSerial,serialPortName,0);
     if(status != asynSuccess){
-        printf("MAXnetConfig: can't connect to port %s: %s\n",serialPortName,pasynUserSerial->errorMessage);
+        printf("MXAConfig: can't connect to port %s: %s\n",serialPortName,pasynUserSerial->errorMessage);
         return;
     }
 
     status =  pasynManager->exceptionCallbackAdd(pasynUserSerial, connectCallback);
     if(status != asynSuccess){
-        printf("MAXnetConfig: can't set exceptionCallback for %s: %s\n",serialPortName,pasynUserSerial->errorMessage);
+        printf("MXAConfig: can't set exceptionCallback for %s: %s\n",serialPortName,pasynUserSerial->errorMessage);
         return;
     }
     /* set the connect flag */
@@ -112,7 +107,7 @@ omsMAXnet::omsMAXnet(const char* portName, int numAxes, const char* serialPortNa
 
     pasynInterface = pasynManager->findInterface(pasynUserSerial,asynOctetType,1);
     if( pasynInterface == NULL) {
-        printf("MAXnetConfig: %s driver not supported\n", asynOctetType);
+        printf("MXAConfig: %s driver not supported\n", asynOctetType);
         return;
     }
     pasynOctetSerial = (asynOctet*)pasynInterface->pinterface;
@@ -120,7 +115,7 @@ omsMAXnet::omsMAXnet(const char* portName, int numAxes, const char* serialPortNa
 
     status = pasynOctetSyncIO->connect(serialPortName, 0, &pasynUserSyncIOSerial, NULL);
     if(status != asynSuccess){
-        printf("MAXnetConfig: can't connect pasynOctetSyncIO %s: %s\n",serialPortName,pasynUserSyncIOSerial->errorMessage);
+        printf("MXAConfig: can't connect pasynOctetSyncIO %s: %s\n",serialPortName,pasynUserSyncIOSerial->errorMessage);
         return;
     }
 
@@ -134,38 +129,38 @@ omsMAXnet::omsMAXnet(const char* portName, int numAxes, const char* serialPortNa
     if (pasynOctetSyncIO->getInputEos(pasynUserSyncIOSerial, eosstring, 5, &eoslen) == asynSuccess) {
         if (eoslen == 0)
             if (pasynOctetSyncIO->setInputEos(pasynUserSyncIOSerial, "\n\r", 2) != asynSuccess)
-                printf("MAXnetConfig: unable to set InputEOS %s: %s\n", serialPortName, pasynUserSyncIOSerial->errorMessage);
+                printf("MXAConfig: unable to set InputEOS %s: %s\n", serialPortName, pasynUserSyncIOSerial->errorMessage);
     }
     if (pasynOctetSyncIO->getOutputEos(pasynUserSyncIOSerial, eosstring, 5, &eoslen) == asynSuccess) {
         if (eoslen == 0)
             if (pasynOctetSyncIO->setOutputEos(pasynUserSyncIOSerial, "\n", 1) != asynSuccess)
-                printf("MAXnetConfig: unable to set OutputEOS %s: %s\n", serialPortName, pasynUserSyncIOSerial->errorMessage);
+                printf("MXAConfig: unable to set OutputEOS %s: %s\n", serialPortName, pasynUserSyncIOSerial->errorMessage);
     }
 
     void* registrarPvt= NULL;
-    status = pasynOctetSerial->registerInterruptUser(octetPvtSerial, pasynUserSerial, omsMAXnet::asynCallback, this, &registrarPvt);
+    status = pasynOctetSerial->registerInterruptUser(octetPvtSerial, pasynUserSerial, omsMXA::asynCallback, this, &registrarPvt);
     if(status != asynSuccess) {
-        printf("MAXnetConfig: registerInterruptUser failed - %s: %s\n",serialPortName,pasynUserSerial->errorMessage);
+        printf("MXAConfig: registerInterruptUser failed - %s: %s\n",serialPortName,pasynUserSerial->errorMessage);
         return;
     }
 
     /* get FirmwareVersion */
     if(getFirmwareVersion() != asynSuccess) {
-        printf("MAXnetConfig: unable to talk to controller at %s: %s\n",serialPortName,pasynUserSyncIOSerial->errorMessage);
+        printf("MXAConfig: unable to talk to controller at %s: %s\n",serialPortName,pasynUserSyncIOSerial->errorMessage);
         return;
     }
-    if (fwMinor < 30 ){
-        printf("This Controllers Firmware Version %d.%d is not supported, version 1.30 or higher is mandatory\n", fwMajor, fwMinor);
+    if (fwMinor < minFwMinor ){
+        printf("This Controllers Firmware Version %d.%d is not supported, version %d.%d or higher is mandatory\n", fwMajor, fwMinor, minFwMajor, minFwMinor);
     }
 
     if( Init(initString, 0) != asynSuccess) {
-        printf("MAXnetConfig: unable to talk to controller at %s: %s\n",serialPortName,pasynUserSyncIOSerial->errorMessage);
+        printf("MXAConfig: unable to talk to controller at %s: %s\n",serialPortName,pasynUserSyncIOSerial->errorMessage);
         return;
     }
 }
 
 // poll the serial port for notification messages while waiting
-epicsEventWaitStatus omsMAXnet::waitInterruptible(double timeout)
+epicsEventWaitStatus omsMXA::waitInterruptible(double timeout)
 {
     double pollWait, timeToWait = timeout;
     asynStatus status;
@@ -203,7 +198,7 @@ epicsEventWaitStatus omsMAXnet::waitInterruptible(double timeout)
     return waitStatus;
 }
 
-asynStatus omsMAXnet::sendOnly(const char *outputBuff)
+asynStatus omsMXA::sendOnly(const char *outputBuff)
 {
     size_t nActual = 0;
     asynStatus status;
@@ -215,18 +210,18 @@ asynStatus omsMAXnet::sendOnly(const char *outputBuff)
 
     if (status != asynSuccess) {
         asynPrint(pasynUserSyncIOSerial, ASYN_TRACE_ERROR,
-                  "drvMAXnetAsyn:sendOnly: error sending command %s, sent=%d, status=%d\n",
+                  "drvMXAAsyn:sendOnly: error sending command %s, sent=%d, status=%d\n",
                   outputBuff, nActual, status);
     }
-    Debug(4, "omsMAXnet::sendOnly: wrote: %s \n", outputBuff);
+    Debug(4, "omsMXA::sendOnly: wrote: %s \n", outputBuff);
     return(status);
 }
 
-asynStatus omsMAXnet::sendReceive(const char *outputBuff, char *inputBuff, unsigned int inputSize)
+asynStatus omsMXA::sendReceive(const char *outputBuff, char *inputBuff, unsigned int inputSize)
 {
-    char localBuffer[MAXnet_MAX_BUFFERLENGTH + 1] = "";
+    char localBuffer[MXA_MAX_BUFFERLENGTH + 1] = "";
     size_t nRead=0, nReadnext=0, nWrite=0;
-    size_t bufferSize = MAXnet_MAX_BUFFERLENGTH;
+    size_t bufferSize = MXA_MAX_BUFFERLENGTH;
     int eomReason = 0;
     asynStatus status = asynSuccess;
     char *outString = localBuffer;
@@ -260,7 +255,7 @@ asynStatus omsMAXnet::sendReceive(const char *outputBuff, char *inputBuff, unsig
         }
     }
 
-    Debug(4, "omsMAXnet::sendReceive: write: %s \n", outputBuff);
+    Debug(4, "omsMXA::sendReceive: write: %s \n", outputBuff);
     nRead=0;
     nReadnext=0;
     status = pasynOctetSyncIO->writeRead(pasynUserSyncIOSerial, outputBuff, strlen(outputBuff), localBuffer,
@@ -298,7 +293,7 @@ asynStatus omsMAXnet::sendReceive(const char *outputBuff, char *inputBuff, unsig
     strncpy(inputBuff, outString, inputSize);
     inputBuff[inputSize-1] = '\0';
 
-    Debug(4, "omsMAXnet::sendReceive: read: %s \n", inputBuff);
+    Debug(4, "omsMXA::sendReceive: read: %s \n", inputBuff);
 
     return status;
 }
@@ -307,7 +302,7 @@ asynStatus omsMAXnet::sendReceive(const char *outputBuff, char *inputBuff, unsig
  * check if buffer is a notification messages with 13 chars ("%000 SSSSSSSS")
  * (first character may miss
  */
-int omsMAXnet::isNotification (char *buffer) {
+int omsMXA::isNotification (char *buffer) {
 
     const char* functionName="isNotification";
     char *inString;
@@ -329,7 +324,7 @@ int omsMAXnet::isNotification (char *buffer) {
 /*
  * disconnect and reconnect the serial / IP connection
  */
-bool omsMAXnet::resetConnection(){
+bool omsMXA::resetConnection(){
 
     asynStatus status;
     int autoConnect;
@@ -349,18 +344,18 @@ bool omsMAXnet::resetConnection(){
    return true;
 }
 
-extern "C" int omsMAXnetConfig(
-              const char *portName,      /* MAXnet Motor Asyn Port name */
+extern "C" int omsMXAConfig(
+              const char *portName,      /* MXA Motor Asyn Port name */
               int numAxes,               /* Number of axes this controller supports */
-              const char *serialPortName,/* MAXnet Serial Asyn Port name */
+              const char *serialPortName,/* MXA Serial Asyn Port name */
               int movingPollPeriod,      /* Time to poll (msec) when an axis is in motion */
               int idlePollPeriod,        /* Time to poll (msec) when an axis is idle. 0 for no polling */
               const char *initString)    /* Init String sent to card */
 {
-    // for now priority and stacksize are hardcoded here, should they be configurable in omsMAXnetConfig?
+    // for now priority and stacksize are hardcoded here, should they be configurable in omsMXAConfig?
     int priority = epicsThreadPriorityMedium;
     int stackSize = epicsThreadGetStackSize(epicsThreadStackMedium);
-    omsMAXnet *pController = new omsMAXnet(portName, numAxes, serialPortName, initString, priority, stackSize);
+    omsMXA *pController = new omsMXA(portName, numAxes, serialPortName, initString, priority, stackSize);
     pController->startPoller((double)movingPollPeriod, (double)idlePollPeriod, 10);
     return(asynSuccess);
 }
@@ -370,30 +365,30 @@ extern "C" int omsMAXnetConfig(
 extern "C"
 {
 
-/* omsMAXnetConfig */
-static const iocshArg omsMAXnetConfigArg0 = {"asyn motor port name", iocshArgString};
-static const iocshArg omsMAXnetConfigArg1 = {"number of axes", iocshArgInt};
-static const iocshArg omsMAXnetConfigArg2 = {"asyn serial/tcp port name", iocshArgString};
-static const iocshArg omsMAXnetConfigArg3 = {"moving poll rate", iocshArgInt};
-static const iocshArg omsMAXnetConfigArg4 = {"idle poll rate", iocshArgInt};
-static const iocshArg omsMAXnetConfigArg5 = {"initstring", iocshArgString};
-static const iocshArg * const omsMAXnetConfigArgs[6] = {&omsMAXnetConfigArg0,
-                                                  &omsMAXnetConfigArg1,
-                                                  &omsMAXnetConfigArg2,
-                                                  &omsMAXnetConfigArg3,
-                                                  &omsMAXnetConfigArg4,
-                                                  &omsMAXnetConfigArg5 };
-static const iocshFuncDef configOmsMAXnet = {"omsMAXnetConfig", 6, omsMAXnetConfigArgs};
-static void configOmsMAXnetCallFunc(const iocshArgBuf *args)
+/* omsMXAConfig */
+static const iocshArg omsMXAConfigArg0 = {"asyn motor port name", iocshArgString};
+static const iocshArg omsMXAConfigArg1 = {"number of axes", iocshArgInt};
+static const iocshArg omsMXAConfigArg2 = {"asyn serial/tcp port name", iocshArgString};
+static const iocshArg omsMXAConfigArg3 = {"moving poll rate", iocshArgInt};
+static const iocshArg omsMXAConfigArg4 = {"idle poll rate", iocshArgInt};
+static const iocshArg omsMXAConfigArg5 = {"initstring", iocshArgString};
+static const iocshArg * const omsMXAConfigArgs[6] = {&omsMXAConfigArg0,
+                                                  &omsMXAConfigArg1,
+                                                  &omsMXAConfigArg2,
+                                                  &omsMXAConfigArg3,
+                                                  &omsMXAConfigArg4,
+                                                  &omsMXAConfigArg5 };
+static const iocshFuncDef configOmsMXA = {"omsMXAConfig", 6, omsMXAConfigArgs};
+static void configOmsMXACallFunc(const iocshArgBuf *args)
 {
-    omsMAXnetConfig(args[0].sval, args[1].ival, args[2].sval, args[3].ival, args[4].ival, args[5].sval);
+    omsMXAConfig(args[0].sval, args[1].ival, args[2].sval, args[3].ival, args[4].ival, args[5].sval);
 }
 
-static void OmsMAXnetAsynRegister(void)
+static void OmsMXAAsynRegister(void)
 {
-    iocshRegister(&configOmsMAXnet,     configOmsMAXnetCallFunc);
+    iocshRegister(&configOmsMXA,     configOmsMXACallFunc);
 }
 
-epicsExportRegistrar(OmsMAXnetAsynRegister);
+epicsExportRegistrar(OmsMXAAsynRegister);
 
 }

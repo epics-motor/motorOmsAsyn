@@ -1,0 +1,3 @@
+registrar(OmsMXAAsynRegister)
+#variable(motorOMSBASEdebug)
+#variable(motorMXAdebug)

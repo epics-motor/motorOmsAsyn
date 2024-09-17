@@ -66,6 +66,7 @@ protected:
     static int omsTotalControllerNumber;
     char* controllerType;
     int fwMajor, fwMinor, fwRevision;
+    int minFwMajor, minFwMinor, minFwRevision;
     epicsTimeStamp now;
     char* portName;
     bool useWatchdog;

@@ -25,6 +25,7 @@ dbLoadRecords("$(MOTOR)/db/motorUtil.db", "P=omsAsyn:")
 ## 
 < MAXnet.cmd
 < MAXv.cmd
+#!< MXA.cmd
 
 iocInit
 

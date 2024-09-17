@@ -1,5 +1,5 @@
 # motorOmsAsyn
-EPICS asyn motor drivers for the following [OMS](https://www.omsinmotion.com/) controllers: MAXv and MAXnet
+EPICS asyn motor drivers for the following [OMS](https://www.omsinmotion.com/) controllers: MAXv, MAXnet and MXA-21
 
 [![Build Status](https://github.com/epics-motor/motorOmsAsyn/actions/workflows/ci-scripts-build.yml/badge.svg)](https://github.com/epics-motor/motorOmsAsyn/actions/workflows/ci-scripts-build.yml)
 <!--[![Build Status](https://travis-ci.org/epics-motor/motorOmsAsyn.png)](https://travis-ci.org/epics-motor/motorOmsAsyn)-->

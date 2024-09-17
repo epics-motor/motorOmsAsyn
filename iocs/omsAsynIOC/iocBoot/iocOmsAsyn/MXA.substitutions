@@ -1,0 +1,13 @@
+file "$(MOTOR)/db/asyn_motor_model2.db"
+{
+pattern
+{N,        M,        DTYP,   PORT,  ADDR,         DESC,  EGU,  DIR,  VELO,  VBAS,  ACCL,  BDST,  BVEL,  BACC,  MRES,   PREC,  DHLM,  DLLM,  INIT}
+{1,  "m$(N)",  "asynMotor",  MXA1,     0, "motor $(N)",  deg,  Pos,    10,     0,    .2,     0,     1,     2,  0.01,      5,     0,     0,    ""}
+{2,  "m$(N)",  "asynMotor",  MXA1,     1, "motor $(N)",  deg,  Pos,    10,     0,    .2,     0,     1,     2,  0.01,      5,     0,     0,    ""}
+{3,  "m$(N)",  "asynMotor",  MXA1,     2, "motor $(N)",  deg,  Pos,    10,     0,    .2,     0,     1,     2,  0.01,      5,     0,     0,    ""}
+{4,  "m$(N)",  "asynMotor",  MXA1,     3, "motor $(N)",  deg,  Pos,    10,     0,    .2,     0,     1,     2,  0.01,      5,     0,     0,    ""}
+{5,  "m$(N)",  "asynMotor",  MXA1,     4, "motor $(N)",  deg,  Pos,    10,     0,    .2,     0,     1,     2,  0.01,      5,     0,     0,    ""}
+{6,  "m$(N)",  "asynMotor",  MXA1,     5, "motor $(N)",  deg,  Pos,    10,     0,    .2,     0,     1,     2,  0.01,      5,     0,     0,    ""}
+{7,  "m$(N)",  "asynMotor",  MXA1,     6, "motor $(N)",  deg,  Pos,    10,     0,    .2,     0,     1,     2,  0.01,      5,     0,     0,    ""}
+{8,  "m$(N)",  "asynMotor",  MXA1,     7, "motor $(N)",  deg,  Pos,    10,     0,    .2,     0,     1,     2,  0.01,      5,     0,     0,    ""}
+}
