@@ -6,7 +6,7 @@ R1-1 is a release based on the master branch.
 ### Changes since R1-0-3
 
 #### New features
-* Pull request [#9](https://github.com/epics-motor/motorOmsAsyn/pull/9): Added support for the MXA-21 controller, which is based on teh MAXnet driver
+* Pull request [#9](https://github.com/epics-motor/motorOmsAsyn/pull/9): Added support for the MXA-21 controller, which is based on the MAXnet driver
 
 #### Modifications to existing features
 * None
