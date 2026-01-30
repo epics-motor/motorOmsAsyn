@@ -15,7 +15,7 @@ R1-1 is a release based on the master branch.
 * None
 
 #### Continuous integration
-* Added ci-scripts (v3.4.1)
+* Updated ci-scripts (v3.4.1)
 
 ## __R1-0-3 (2023-04-12)__
 R1-0-3 is a release based on the master branch.
