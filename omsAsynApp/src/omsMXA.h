@@ -25,6 +25,7 @@ public:
     asynStatus sendReceive(const char *, char *, unsigned int );
     asynStatus sendOnly(const char *);
     virtual bool resetConnection();
+    virtual bool watchdogOK();
 
 private:
     int isNotification (char *);

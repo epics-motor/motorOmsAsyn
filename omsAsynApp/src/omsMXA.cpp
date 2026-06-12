@@ -344,6 +344,23 @@ bool omsMXA::resetConnection(){
    return true;
 }
 
+bool omsMXA::watchdogOK()
+{
+    char inputBuff[10] = "";
+    const char* functionName = "watchdogOK";
+    
+    if (useWatchdog && (fwMinor >= 0)) {
+        sendReceiveLock("#WS", inputBuff, sizeof(inputBuff));
+        if ((inputBuff[0] == '=') && (inputBuff[1] != '0')) {
+            errlogPrintf("%s:%s:%s: *** CAUTION watchdog not running, disabling card ***\n",
+                    driverName, functionName, portName);
+            enabled = false;
+            return false;
+        }
+    }
+    return true;
+}
+
 extern "C" int omsMXAConfig(
               const char *portName,      /* MXA Motor Asyn Port name */
               int numAxes,               /* Number of axes this controller supports */
