@@ -21,7 +21,15 @@ dbLoadTemplate("MXA.substitutions", "P=$(PREFIX)")
 #    const char *serialPortName,/* MXA Serial Asyn Port name */
 #    int movingPollPeriod,      /* Time to poll (msec) when an axis is in motion */
 #    int idlePollPeriod,        /* Time to poll (msec) when an axis is idle. 0 for no polling */
-#    const char *initString)    /* Init String sent to card */
+#    const char *initString,    /* Init String sent to card */
+#    int commandDelay)          /* Minimum time (msec) between commands. 0 for no delay */
+#
+# Some MXA controllers can't keep up with back-to-back commands.  When that
+# happens a reply arrives after the driver has stopped waiting for it and is
+# mistaken for the answer to the following command, which leaves every
+# subsequent reply off by one.  Setting commandDelay to a few milliseconds
+# spaces the commands out far enough for the controller to keep up.  The
+# argument may be omitted, which is the same as specifying 0.
 # Example init strings:
 #    Open-loop axes
 #      "AX LH PSO; AY LH PSO; AZ LH PSO; AT LH PSO; AU LH PSO; AV LH PSO; AR LH PSO; AS LH PSO;"
@@ -30,4 +38,4 @@ dbLoadTemplate("MXA.substitutions", "P=$(PREFIX)")
 #    Axis with BiSS-C encoder
 #      "AX LL PSE ECB32,500000;"
 # Normal limit polarity for real NC limits
-omsMXAConfig("MXA1", 8, "MXA", 200, 2000, "AX LH PSO; AY LH PSO; AZ LH PSO; AT LH PSO; AU LH PSO; AV LH PSO; AR LH PSO; AS LH PSO;")
+omsMXAConfig("MXA1", 8, "MXA", 200, 2000, "AX LH PSO; AY LH PSO; AZ LH PSO; AT LH PSO; AU LH PSO; AV LH PSO; AR LH PSO; AS LH PSO;", 5)

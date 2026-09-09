@@ -16,7 +16,7 @@ USAGE...        Pro-Dex OMS MXA asyn motor controller support
 
 class omsMXA : public omsBaseController {
 public:
-    omsMXA(const char* , int , const char*, const char*, int , int );
+    omsMXA(const char* , int , const char*, const char*, int , int , int );
     static void asynCallback(void*, asynUser*, char *, size_t, int);
     int portConnected;
     int notificationCounter;
@@ -29,12 +29,17 @@ public:
 
 private:
     int isNotification (char *);
+    void commandDelay();
     asynUser* pasynUserSerial;
     asynUser* pasynUserSyncIOSerial;
     asynOctet *pasynOctetSerial;
     void* octetPvtSerial;
     char* serialPortName;
     double timeout;
+    /* minimum interval between commands, in seconds; 0 disables pacing */
+    double commandDelay_;
+    epicsTimeStamp lastCommandTime_;
+    bool haveLastCommandTime_;
 };
 
 #endif /* OMSMXA_H_ */

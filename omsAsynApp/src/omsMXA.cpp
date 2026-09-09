@@ -69,7 +69,7 @@ void omsMXA::asynCallback(void *drvPvt, asynUser *pasynUser, char *data, size_t 
     }
 }
 
-omsMXA::omsMXA(const char* portName, int numAxes, const char* serialPortName, const char* initString, int priority, int stackSize)
+omsMXA::omsMXA(const char* portName, int numAxes, const char* serialPortName, const char* initString, int priority, int stackSize, int commandDelayMs)
     : omsBaseController(portName, numAxes, priority, stackSize, 0){
 
     asynStatus status;
@@ -82,6 +82,10 @@ omsMXA::omsMXA(const char* portName, int numAxes, const char* serialPortName, co
     useWatchdog = true;
     char eosstring[5];
     int eoslen=0;
+
+    if (commandDelayMs < 0) commandDelayMs = 0;
+    commandDelay_ = (double)commandDelayMs / 1000.0;
+    haveLastCommandTime_ = false;
 
     minFwMajor = 1;
     minFwMinor = 0;
@@ -199,12 +203,44 @@ epicsEventWaitStatus omsMXA::waitInterruptible(double timeout)
     return waitStatus;
 }
 
+/*
+ * Enforce a minimum interval between commands.
+ *
+ * Some MXA controllers cannot keep up with back-to-back commands: a reply
+ * arrives after the driver has already given up waiting and is then taken as
+ * the answer to the following command, leaving every reply after it offset by
+ * one.  Sleeping only when the previous command was recent means naturally
+ * spaced traffic costs nothing.
+ *
+ * Called with baseMutex held (via sendOnlyLock/sendReceiveLock), so the
+ * timestamp needs no additional locking.
+ */
+void omsMXA::commandDelay()
+{
+    epicsTimeStamp nowTime;
+
+    if (commandDelay_ <= 0.0) return;
+
+    if (haveLastCommandTime_) {
+        double elapsed;
+        epicsTimeGetCurrent(&nowTime);
+        elapsed = epicsTimeDiffInSeconds(&nowTime, &lastCommandTime_);
+        if ((elapsed >= 0.0) && (elapsed < commandDelay_))
+            epicsThreadSleep(commandDelay_ - elapsed);
+    }
+
+    epicsTimeGetCurrent(&lastCommandTime_);
+    haveLastCommandTime_ = true;
+}
+
 asynStatus omsMXA::sendOnly(const char *outputBuff)
 {
     size_t nActual = 0;
     asynStatus status;
 
     if (!enabled) return asynError;
+
+    commandDelay();
 
     status = pasynOctetSyncIO->write(pasynUserSyncIOSerial, outputBuff,
                              strlen(outputBuff), timeout, &nActual);
@@ -229,6 +265,8 @@ asynStatus omsMXA::sendReceive(const char *outputBuff, char *inputBuff, unsigned
     int errorCount = 10;
 
     if (!enabled) return asynError;
+
+    commandDelay();
 
     /*
      * read the notification from input buffer
@@ -403,12 +441,13 @@ extern "C" int omsMXAConfig(
               const char *serialPortName,/* MXA Serial Asyn Port name */
               int movingPollPeriod,      /* Time to poll (msec) when an axis is in motion */
               int idlePollPeriod,        /* Time to poll (msec) when an axis is idle. 0 for no polling */
-              const char *initString)    /* Init String sent to card */
+              const char *initString,    /* Init String sent to card */
+              int commandDelay)          /* Minimum time (msec) between commands. 0 for no delay */
 {
     // for now priority and stacksize are hardcoded here, should they be configurable in omsMXAConfig?
     int priority = epicsThreadPriorityMedium;
     int stackSize = epicsThreadGetStackSize(epicsThreadStackMedium);
-    omsMXA *pController = new omsMXA(portName, numAxes, serialPortName, initString, priority, stackSize);
+    omsMXA *pController = new omsMXA(portName, numAxes, serialPortName, initString, priority, stackSize, commandDelay);
     pController->startPoller((double)movingPollPeriod, (double)idlePollPeriod, 10);
     return(asynSuccess);
 }
@@ -425,16 +464,20 @@ static const iocshArg omsMXAConfigArg2 = {"asyn serial/tcp port name", iocshArgS
 static const iocshArg omsMXAConfigArg3 = {"moving poll rate", iocshArgInt};
 static const iocshArg omsMXAConfigArg4 = {"idle poll rate", iocshArgInt};
 static const iocshArg omsMXAConfigArg5 = {"initstring", iocshArgString};
-static const iocshArg * const omsMXAConfigArgs[6] = {&omsMXAConfigArg0,
+static const iocshArg omsMXAConfigArg6 = {"command delay (msec)", iocshArgInt};
+static const iocshArg * const omsMXAConfigArgs[7] = {&omsMXAConfigArg0,
                                                   &omsMXAConfigArg1,
                                                   &omsMXAConfigArg2,
                                                   &omsMXAConfigArg3,
                                                   &omsMXAConfigArg4,
-                                                  &omsMXAConfigArg5 };
-static const iocshFuncDef configOmsMXA = {"omsMXAConfig", 6, omsMXAConfigArgs};
+                                                  &omsMXAConfigArg5,
+                                                  &omsMXAConfigArg6 };
+static const iocshFuncDef configOmsMXA = {"omsMXAConfig", 7, omsMXAConfigArgs};
 static void configOmsMXACallFunc(const iocshArgBuf *args)
 {
-    omsMXAConfig(args[0].sval, args[1].ival, args[2].sval, args[3].ival, args[4].ival, args[5].sval);
+    /* a missing trailing argument arrives as ival=0, so existing 6-argument
+     * startup scripts keep working with no command delay */
+    omsMXAConfig(args[0].sval, args[1].ival, args[2].sval, args[3].ival, args[4].ival, args[5].sval, args[6].ival);
 }
 
 static void OmsMXAAsynRegister(void)
