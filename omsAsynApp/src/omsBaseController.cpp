@@ -80,6 +80,9 @@ omsBaseController::omsBaseController(const char *portName, int maxAxes, int prio
     enabled = true;
     numAxes = maxAxes;
     controllerType = NULL;
+    /* the axis array is not built until Init(); leave it NULL until then so
+     * that code running after an early Init() failure can test it */
+    pAxes = NULL;
     baseMutex = new epicsMutex;
 
     if (prio == 0)
@@ -579,6 +582,54 @@ void omsBaseController::callPoller(void *drvPvt)
     pController->omsPoller();
 }
 
+/*
+ * Tell every axis that its move has failed.
+ *
+ * Called when the controller can no longer be polled.  Without this the motor
+ * record is left waiting for a completion that will never be reported: the
+ * record has no timeout of its own, so DMOV stays 0 and anything waiting on
+ * the move waits forever.
+ *
+ * Posting motorStatusDone_ on its own is not enough.  The readback is stranded
+ * short of the target, so the record finds itself outside RDBD and schedules a
+ * retry, clearing DMOV again.  motorStatusProblem_ clears MOVN independently of
+ * the done flag and raises a MAJOR alarm, which is the record's way of saying
+ * the move failed rather than finished.  DMOV finally latches once the record
+ * has counted RTRY retries and set MISS; that needs one call per poll, not a
+ * single call, which is why this is driven from the poller loop.
+ *
+ * motorStatusCommsError_ is deliberately not set here.  It has no effect on
+ * DMOV, and once the record is in COMM_ALARM its device support refuses to
+ * forward stop and update requests, which makes the axis harder to recover.
+ *
+ * Must not be gated on "enabled": this exists precisely for the case where the
+ * card has been disabled.
+ */
+void omsBaseController::setAxesMoveFailed()
+{
+    /* Init() may not have run, or may have failed before building the array */
+    if (pAxes == NULL) return;
+
+    lock();
+    for (int i=0; i < numAxes; i++) {
+        omsBaseAxis* pAxis = pAxes[i];
+        if (pAxis == NULL) continue;
+
+        pAxis->setIntegerParam(motorStatusDone_, 1);
+        pAxis->setIntegerParam(motorStatusMoving_, 0);
+        pAxis->setIntegerParam(motorStatusProblem_, 1);
+        pAxis->moveDelay = 0;
+        if (pAxis->homing) pAxis->homing = 0;
+
+        /* The axis only reports a change when the status word actually
+         * differs, and an axis that was already idle will not differ.  Force
+         * the callback out so the record processes and can retire the move. */
+        pAxis->statusChanged_ = 1;
+        pAxis->callParamCallbacks();
+    }
+    unlock();
+}
+
 
 #define DELTA 0.1
 void omsBaseController::omsPoller()
@@ -625,9 +676,32 @@ void omsBaseController::omsPoller()
         }
         unlock();
 
+        /* The card has been disabled, by a watchdog timeout or by a failure
+         * during initialization.  Nothing can be polled: every command is
+         * rejected before it reaches the controller, so the axis loop below is
+         * never reached and the motor record is left waiting for a completion
+         * that will never be reported.  Keep reporting the failure instead.
+         *
+         * This repeats every poll on purpose.  The record only retires the move
+         * once it has counted RTRY unsuccessful retries, and it counts one per
+         * callback, so a single report would leave DMOV clear.  The cost is the
+         * same as one ordinary poll, which is what this replaces. */
+        if (!enabled) {
+            setAxesMoveFailed();
+            /* Plain sleep rather than waitInterruptible(): there is nothing to
+             * be woken for, since a poll event would only produce the same
+             * report again, and an idle poll period of zero -- meaning "do not
+             * poll" -- would otherwise spin. */
+            epicsThreadSleep((idlePollPeriod > 0.0) ? idlePollPeriod : 1.0);
+            continue;
+        }
+
         if (loopBreakCount > 10){
             errlogPrintf("%s:%s:%s: Error: %d consecutive unsuccessful attempts to read from motor card\n"
                     , driverName, functionName, this->portName, loopBreakCount);
+            /* the poller is about to exit, so this is the last chance to
+             * release any axis the motor record still thinks is moving */
+            setAxesMoveFailed();
             break;
         }
 
@@ -700,6 +774,8 @@ void omsBaseController::omsPoller()
             haveLimits = false;
             Debug(1,"%s:%s:%s: error reading limits %s\n", driverName, functionName, this->portName, pollInputBuffer);
         }
+        /* a tripped watchdog disables the card; the next pass through the loop
+         * reports the failure to the motor records */
         if (enabled) watchdogOK();
 
         anyMoving = 0;

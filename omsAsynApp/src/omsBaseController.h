@@ -57,6 +57,7 @@ protected:
     virtual asynStatus getEncoderPositions(epicsInt32 encPosArr[OMS_MAX_AXES]);
     virtual asynStatus getClosedLoopStatus(int clstatus[OMS_MAX_AXES]);
     virtual epicsEventWaitStatus waitInterruptible(double timeout);
+    void setAxesMoveFailed();
     virtual bool watchdogOK();
     virtual bool resetConnection(){return false;};
     char* getPortName(){return portName;};
