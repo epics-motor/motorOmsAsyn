@@ -4,6 +4,7 @@ USAGE...        Pro-Dex OMS MXA asyn motor controller support
 
 */
 
+#include <stdlib.h>
 #include <string.h>
 
 #include "asynOctetSyncIO.h"
@@ -344,20 +345,55 @@ bool omsMXA::resetConnection(){
    return true;
 }
 
+/*
+ * Query the watchdog timeout counter.
+ *
+ * The MXA-21 command reference lists #WS as valid in both single-axis and
+ * AA-AM modes, but that is incorrect: the controller only accepts #WS in
+ * single-axis mode.  The poller leaves the controller in AM mode, so a bare
+ * #WS is answered with a command error rather than a counter value and the
+ * watchdog state is never actually read.  Selecting an axis first with
+ * "AX;#WS" returns the counter.
+ *
+ * "AX;" is an immediate command, so this costs no axis queue space.  The
+ * controller is left addressing the X axis; every other command the driver
+ * sends carries its own "AM;" or "A<c>;" prefix, so no mode restore is needed.
+ *
+ * Once the watchdog has tripped the controller rejects everything except #WS,
+ * #WC and WY.  "AX;#WS" still reports the counter in that state -- the reply
+ * is the counter followed by a command error for the rejected "AX;", and the
+ * trailing error is consumed by the notification handling in sendReceive().
+ */
 bool omsMXA::watchdogOK()
 {
-    char inputBuff[10] = "";
+    char inputBuff[16] = "";
     const char* functionName = "watchdogOK";
-    
-    if (useWatchdog && (fwMinor >= 0)) {
-        sendReceiveLock("#WS", inputBuff, sizeof(inputBuff));
-        if ((inputBuff[0] == '=') && (inputBuff[1] != '0')) {
-            errlogPrintf("%s:%s:%s: *** CAUTION watchdog not running, disabling card ***\n",
-                    driverName, functionName, portName);
-            enabled = false;
-            return false;
-        }
+    epicsInt32 watchdogCount;
+
+    if (!useWatchdog) return true;
+
+    if ((sendReceiveLock("AX;#WS", inputBuff, sizeof(inputBuff)) != asynSuccess)
+            || (inputBuff[0] != '=')) {
+        /* Could not read the counter at all.  That is a communication problem,
+         * not proof of a watchdog timeout, so do not disable the card here. */
+        Debug(1, "%s:%s:%s: unable to read watchdog counter >%s<\n",
+                driverName, functionName, portName, inputBuff);
+        return true;
     }
+
+    watchdogCount = (epicsInt32) strtol(&inputBuff[1], NULL, 10);
+
+    if (watchdogCount != 0) {
+        errlogPrintf("%s:%s:%s: *** CAUTION watchdog timeout counter is %d, "
+                "disabling card ***\n",
+                driverName, functionName, portName, watchdogCount);
+        errlogPrintf("%s:%s:%s: the controller ignores all commands except "
+                "#WS, #WC and WY until the counter is cleared with #WC\n",
+                driverName, functionName, portName);
+        enabled = false;
+        return false;
+    }
+
     return true;
 }
 
