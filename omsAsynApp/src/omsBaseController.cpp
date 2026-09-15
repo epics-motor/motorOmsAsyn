@@ -812,7 +812,39 @@ void omsBaseController::omsPoller()
                 pAxis->setIntegerParam(motorStatusMoving_, 0);
                 if (pAxis->homing) pAxis->homing = 0;
             }
-            else if (haveVeloArray && (veloArr[i] == 0)){
+            else if (!haveVeloArray){
+                /* The velocity read failed, so we do not know whether this axis
+                 * is moving.  Missing data is not evidence of motion: forcing
+                 * motorStatusMoving_ here would mark every axis without a done
+                 * flag as moving, which is what the final branch below used to
+                 * do.  Leave the done/moving state alone and let the next poll
+                 * decide.
+                 *
+                 * An axis that is already moving still needs a way out.  The
+                 * done flag is cleared by the RI command that reports it, so a
+                 * reply lost to a communication timeout takes the only
+                 * notification of the completed move with it, and the usual
+                 * recovery (velocity has dropped to zero) is exactly what is
+                 * unavailable here.  Keep counting polls so such an axis ends
+                 * up in the same timeout below instead of moving forever. */
+                getIntegerParam(pAxis->axisNo_, motorStatusMoving_, &axisMoving);
+                if (axisMoving){
+                    pAxis->moveDelay++ ;
+                    if (pAxis->moveDelay >= 5) {
+                        Debug(4, "%s:%s:%s: setting Problem Flag axis %d\n", driverName, functionName, portName, i);
+                        pAxis->setIntegerParam(motorStatusDone_, 1);
+                        pAxis->setIntegerParam(motorStatusMoving_, 0);
+                        pAxis->setIntegerParam(motorStatusProblem_, 1);
+                        pAxis->moveDelay = 0;
+                        if (pAxis->homing) pAxis->homing = 0;
+                        Debug(1, "%s:%s:%s: stop axis %d, no velocity available\n", driverName, functionName,
+                            this->portName, i);
+                    }
+                    Debug(2, "%s:%s:%s: moveDelay axis %d, count %d (no velocity)\n", driverName, functionName,
+                        this->portName, i, pAxis->moveDelay );
+                }
+            }
+            else if (veloArr[i] == 0){
                 getIntegerParam(pAxis->axisNo_, motorStatusMoving_, &axisMoving);
                 if (axisMoving){
                     if (statusBuffer[i*STATUSSTRINGLEN + 2] == 'L'){
