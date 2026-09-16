@@ -645,16 +645,16 @@ void omsBaseController::omsPoller()
     omsBaseAxis* pAxis;
     int retry_count, loopBreakCount=0, haveEncoder;
     // asynStatus status;
-    int axisMoving, anyMoving=0;
+    int axisMoving, axisDone, anyMoving=0;
     int forcedFastPolls, fastPolls=0;
-    epicsInt32  axisPosArr[OMS_MAX_AXES], encPosArr[OMS_MAX_AXES], veloArr[OMS_MAX_AXES];
+    epicsInt32  axisPosArr[OMS_MAX_AXES], encPosArr[OMS_MAX_AXES];
     char statusBuffer[OMS_MAX_AXES*STATUSSTRINGLEN+2];
     char encStatusBuffer[OMS_MAX_AXES*6+2];
     int closedLoopStatus[OMS_MAX_AXES];
     char encBuffer[7];
     unsigned int limitFlags;
     epicsTimeStamp now, loopStart;
-    bool haveCLStatus, haveVeloArray, haveEncStatus, haveLimits, useEncoder=false, moveDone;
+    bool haveCLStatus, haveEncStatus, haveLimits, useEncoder=false, moveDone;
 
     lock();
     movingPollPeriod = movingPollPeriod_;
@@ -751,11 +751,6 @@ void omsBaseController::omsPoller()
             Debug(1, "%s:%s:%s: error executing get Closed Loop Status\n", driverName, functionName, this->portName);
         }
 
-        haveVeloArray = true;
-        if (getAxesArray("AM;RV;", veloArr) != asynSuccess){
-            haveVeloArray = false;
-            Debug(1,"%s:%s:%s: Error executing command Report Velocity (RV)\n", driverName, functionName, this->portName);
-        }
         haveEncStatus = true;
         if (sendReceiveLock("AM;EA;", encStatusBuffer, sizeof(encStatusBuffer)) != asynSuccess){
             haveEncStatus = false;
@@ -803,7 +798,23 @@ void omsBaseController::omsPoller()
                 }
             }
 
-            /* check the done flag or current velocity */
+            /* Decide whether this axis is moving.
+             *
+             * The controller reports a completed move by setting the done flag
+             * in the status string, and the motor record clears
+             * motorStatusDone_ when it starts one.  Between those two events
+             * the axis is moving; outside them it is not.  That is the whole
+             * decision, and it needs no further information from the
+             * controller.
+             *
+             * It used to be made from the velocity reported by RV instead,
+             * with the done flag only as a shortcut.  That cost an extra query
+             * per poll on a controller that intermittently stops answering for
+             * seconds at a time -- RV accounted for 43% of the replies that
+             * took longer than a second in a 7.5 hour scan -- and it gave a
+             * wrong answer whenever the query failed, because "no velocity
+             * reported" was indistinguishable from "velocity is non-zero" and
+             * marked every axis without a done flag as moving. */
             if (statusBuffer[i*STATUSSTRINGLEN + 1] == 'D'){
                 Debug(8, "%s:%s:%s: found Done Flag axis %d\n", driverName, functionName, portName, i);
                 pAxis->setIntegerParam(motorStatusProblem_, 0);
@@ -812,42 +823,13 @@ void omsBaseController::omsPoller()
                 pAxis->setIntegerParam(motorStatusMoving_, 0);
                 if (pAxis->homing) pAxis->homing = 0;
             }
-            else if (!haveVeloArray){
-                /* The velocity read failed, so we do not know whether this axis
-                 * is moving.  Missing data is not evidence of motion: forcing
-                 * motorStatusMoving_ here would mark every axis without a done
-                 * flag as moving, which is what the final branch below used to
-                 * do.  Leave the done/moving state alone and let the next poll
-                 * decide.
-                 *
-                 * An axis that is already moving still needs a way out.  The
-                 * done flag is cleared by the RI command that reports it, so a
-                 * reply lost to a communication timeout takes the only
-                 * notification of the completed move with it, and the usual
-                 * recovery (velocity has dropped to zero) is exactly what is
-                 * unavailable here.  Keep counting polls so such an axis ends
-                 * up in the same timeout below instead of moving forever. */
-                getIntegerParam(pAxis->axisNo_, motorStatusMoving_, &axisMoving);
-                if (axisMoving){
-                    pAxis->moveDelay++ ;
-                    if (pAxis->moveDelay >= 5) {
-                        Debug(4, "%s:%s:%s: setting Problem Flag axis %d\n", driverName, functionName, portName, i);
-                        pAxis->setIntegerParam(motorStatusDone_, 1);
-                        pAxis->setIntegerParam(motorStatusMoving_, 0);
-                        pAxis->setIntegerParam(motorStatusProblem_, 1);
-                        pAxis->moveDelay = 0;
-                        if (pAxis->homing) pAxis->homing = 0;
-                        Debug(1, "%s:%s:%s: stop axis %d, no velocity available\n", driverName, functionName,
-                            this->portName, i);
-                    }
-                    Debug(2, "%s:%s:%s: moveDelay axis %d, count %d (no velocity)\n", driverName, functionName,
-                        this->portName, i, pAxis->moveDelay );
-                }
-            }
-            else if (veloArr[i] == 0){
-                getIntegerParam(pAxis->axisNo_, motorStatusMoving_, &axisMoving);
-                if (axisMoving){
+            else {
+                getIntegerParam(pAxis->axisNo_, motorStatusDone_, &axisDone);
+                if (!axisDone){
                     if (statusBuffer[i*STATUSSTRINGLEN + 2] == 'L'){
+                        /* A limit switch ends the move whether or not the
+                         * controller gets as far as reporting it done. */
+                        Debug(4, "%s:%s:%s: limit reached, axis %d\n", driverName, functionName, portName, i);
                         pAxis->setIntegerParam(motorStatusProblem_, 0);
                         pAxis->moveDelay=0;
                         pAxis->setIntegerParam(motorStatusDone_, 1);
@@ -859,28 +841,11 @@ void omsBaseController::omsPoller()
                             pAxis->setIntegerParam(motorStatusLowLimit_, 1);
                     }
                     else {
-                        pAxis->moveDelay++ ;
-                        if (pAxis->moveDelay >= 5) {
-                            Debug(4, "%s:%s:%s: setting Problem Flag axis %d\n", driverName, functionName, portName, i);
-                            pAxis->setIntegerParam(motorStatusDone_, 1);
-                            pAxis->setIntegerParam(motorStatusMoving_, 0);
-                            pAxis->setIntegerParam(motorStatusProblem_, 1);
-                            pAxis->moveDelay = 0;
-                            if (pAxis->homing) pAxis->homing = 0;
-                            Debug(1, "%s:%s:%s: stop axis %d, moveDelay count %d\n", driverName, functionName,
-                                this->portName, i, pAxis->moveDelay );
-                        }
-                        Debug(2, "%s:%s:%s: moveDelay axis %d, count %d\n", driverName, functionName,
-                            this->portName, i, pAxis->moveDelay );
+                        Debug(4, "%s:%s:%s: poller loop: axis %d still moving\n", driverName, functionName, this->portName, i);
+                        pAxis->setIntegerParam(motorStatusProblem_, 0);
+                        pAxis->setIntegerParam(motorStatusMoving_, 1);
                     }
-               }
-            }
-            else {
-                Debug(4, "%s:%s:%s: poller loop: axis %d still moving\n", driverName, functionName, this->portName, i);
-                pAxis->moveDelay = 0;
-                pAxis->setIntegerParam(motorStatusProblem_, 0);
-                pAxis->setIntegerParam(motorStatusDone_, 0);
-                pAxis->setIntegerParam(motorStatusMoving_, 1);
+                }
             }
             getIntegerParam(pAxis->axisNo_, motorStatusMoving_, &axisMoving);
             anyMoving += axisMoving;
