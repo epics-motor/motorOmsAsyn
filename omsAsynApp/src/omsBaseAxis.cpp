@@ -29,6 +29,12 @@ omsBaseAxis::omsBaseAxis(omsBaseController *pController, int axis, char axisChar
     invertLimit = 0;
     lastminvelo = 0;
     encoderRatio = 1.0;
+    /* moveDelay and homing are read by the poller before anything else has a
+     * chance to write them, so they cannot be left indeterminate */
+    moveDelay = 0;
+    homing = 0;
+    lastPosition = 0;
+    haveLastPosition = false;
 }
 
 asynStatus omsBaseAxis::move(double position, int relative, double min_velocity, double max_velocity, double acceleration)

@@ -39,6 +39,10 @@ public:
     int moveDelay;
     char axisChar;
     bool homing;
+    /* position reported by the previous poll, used to notice that a moving
+     * axis has stopped without the controller saying so */
+    epicsInt32 lastPosition;
+    bool haveLastPosition;
 
 
 private:

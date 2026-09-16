@@ -840,13 +840,59 @@ void omsBaseController::omsPoller()
                         else
                             pAxis->setIntegerParam(motorStatusLowLimit_, 1);
                     }
+                    else if (pAxis->haveLastPosition && (axisPosArr[i] == pAxis->lastPosition)){
+                        /* The axis is supposed to be moving but has not moved
+                         * since the previous poll.
+                         *
+                         * This is how a lost done flag is recovered.  The RI
+                         * command clears the done flag as it reports it, so a
+                         * reply discarded after a communication timeout takes
+                         * the only notification of the completed move with it
+                         * and the record would otherwise wait forever.
+                         *
+                         * A standing position is not proof on its own: an axis
+                         * that is merely slow can repeat a position for a poll
+                         * or two.  Across two 7 hour scans, covering 10300
+                         * moves, a genuinely moving axis never repeated one for
+                         * more than two consecutive polls, so waiting for five
+                         * leaves a wide margin.  It is also the count the
+                         * velocity test used before, which keeps the time an
+                         * axis can sit in this state the same as it was.
+                         *
+                         * Stays reported as moving until the count runs out,
+                         * because until then the axis may simply be slow. */
+                        pAxis->moveDelay++ ;
+                        if (pAxis->moveDelay >= 5) {
+                            Debug(4, "%s:%s:%s: setting Problem Flag axis %d\n", driverName, functionName, portName, i);
+                            pAxis->setIntegerParam(motorStatusDone_, 1);
+                            pAxis->setIntegerParam(motorStatusMoving_, 0);
+                            pAxis->setIntegerParam(motorStatusProblem_, 1);
+                            pAxis->moveDelay = 0;
+                            if (pAxis->homing) pAxis->homing = 0;
+                            Debug(1, "%s:%s:%s: stop axis %d, position %d unchanged\n", driverName, functionName,
+                                this->portName, i, axisPosArr[i] );
+                        }
+                        else {
+                            pAxis->setIntegerParam(motorStatusMoving_, 1);
+                        }
+                        Debug(2, "%s:%s:%s: moveDelay axis %d, count %d\n", driverName, functionName,
+                            this->portName, i, pAxis->moveDelay );
+                    }
                     else {
                         Debug(4, "%s:%s:%s: poller loop: axis %d still moving\n", driverName, functionName, this->portName, i);
+                        pAxis->moveDelay = 0;
                         pAxis->setIntegerParam(motorStatusProblem_, 0);
                         pAxis->setIntegerParam(motorStatusMoving_, 1);
                     }
                 }
             }
+
+            /* Remember where the axis was, for the comparison above.  Recorded
+             * on every poll, including those where the position was not used,
+             * so that the next comparison is against the immediately preceding
+             * poll and not some older one. */
+            pAxis->lastPosition = axisPosArr[i];
+            pAxis->haveLastPosition = true;
             getIntegerParam(pAxis->axisNo_, motorStatusMoving_, &axisMoving);
             anyMoving += axisMoving;
 
