@@ -1036,6 +1036,7 @@ asynStatus omsBaseController::getAxesArray(const char* cmd, int positions[OMS_MA
         start = inputBuff;
         stop = start + MIN(strlen(inputBuff), sizeof(inputBuff));
         for (i = 0; ((i < OMS_MAX_AXES) && again); ++i){
+            if (*start == '\0') { positions[i] = 0; ++count; again = 0; continue; }
             if (*start == ','){
                 positions[i] = 0;
                 ++count;
